@@ -1,0 +1,599 @@
+{% extends "base.html" %}
+
+{% block title %}Demo - LSM Key-Value Store{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-play me-2 text-primary"></i>
+            Demo & Examples
+        </h1>
+    </div>
+</div>
+
+<!-- Demo Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Sample Data
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Load sample data to explore the key-value store features including users, products, configuration, sessions, and more.
+                </p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" onclick="loadSampleData()">
+                        <i class="fas fa-download me-2"></i>Load Sample Data
+                    </button>
+                    <button class="btn btn-warning" onclick="clearAllData()">
+                        <i class="fas fa-trash me-2"></i>Clear All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Demo Scenarios -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-users text-primary me-2"></i>User Management Demo
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Demonstrate user CRUD operations</p>
+                <button class="btn btn-sm btn-outline-primary" onclick="runUserDemo()">
+                    <i class="fas fa-play me-1"></i>Run Demo
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-shopping-cart text-success me-2"></i>Product Catalog Demo
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Demonstrate product data management</p>
+                <button class="btn btn-sm btn-outline-success" onclick="runProductDemo()">
+                    <i class="fas fa-play me-1"></i>Run Demo
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cog text-warning me-2"></i>Configuration Demo
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Demonstrate configuration storage</p>
+                <button class="btn btn-sm btn-outline-warning" onclick="runConfigDemo()">
+                    <i class="fas fa-play me-1"></i>Run Demo
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-compress-alt text-info me-2"></i>Compaction Demo
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted">Demonstrate LSM tree compaction</p>
+                <button class="btn btn-sm btn-outline-info" onclick="runCompactionDemo()">
+                    <i class="fas fa-play me-1"></i>Run Demo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Demo Log -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-terminal me-2"></i>Demo Log
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearDemoLog()">
+                    <i class="fas fa-broom me-1"></i>Clear Log
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="demo-log" class="bg-dark text-light p-3 rounded" style="height: 400px; overflow-y: auto; font-family: 'Courier New', monospace;">
+                    <div class="text-success">LSM Key-Value Store Demo Console</div>
+                    <div class="text-muted">Ready for demo operations...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Overview Modal -->
+<div class="modal fade" id="architectureModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">LSM Tree Architecture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <h6>Data Flow in LSM Key-Value Store</h6>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-edit fa-2x text-primary mb-2"></i>
+                            <h6>1. Write Operations</h6>
+                            <small>Operations logged to WAL first, then written to Memtable</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-memory fa-2x text-info mb-2"></i>
+                            <h6>2. Memtable</h6>
+                            <small>In-memory sorted structure (max 30 entries)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-hdd fa-2x text-warning mb-2"></i>
+                            <h6>3. SSTables</h6>
+                            <small>Persistent sorted disk files</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6 text-center mb-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-compress-alt fa-2x text-danger mb-2"></i>
+                            <h6>4. Compaction</h6>
+                            <small>Merges SSTables to optimize storage and performance</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 text-center mb-3">
+                        <div class="border rounded p-3">
+                            <i class="fas fa-search fa-2x text-success mb-2"></i>
+                            <h6>5. Read Operations</h6>
+                            <small>Search Memtable first, then SSTables (newest to oldest)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Button -->
+<div class="position-fixed bottom-0 end-0 p-3">
+    <button class="btn btn-info rounded-circle" data-bs-toggle="modal" data-bs-target="#architectureModal" title="View Architecture">
+        <i class="fas fa-info"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let demoStepDelay = 1000; // 1 second between steps
+
+function logDemo(message, type = 'info') {
+    const logDiv = document.getElementById('demo-log');
+    const timestamp = new Date().toLocaleTimeString();
+    const colors = {
+        'info': 'text-info',
+        'success': 'text-success',
+        'warning': 'text-warning',
+        'error': 'text-danger',
+        'step': 'text-light'
+    };
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = colors[type] || 'text-light';
+    logEntry.innerHTML = `[${timestamp}] ${message}`;
+    
+    logDiv.appendChild(logEntry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function clearDemoLog() {
+    const logDiv = document.getElementById('demo-log');
+    logDiv.innerHTML = `
+        <div class="text-success">LSM Key-Value Store Demo Console</div>
+        <div class="text-muted">Ready for demo operations...</div>
+    `;
+}
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function loadSampleData() {
+    logDemo('Loading sample data...', 'info');
+    
+    try {
+        const response = await fetch('/api/demo/load_sample', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            logDemo(`✓ Sample data loaded: ${data.successful}/${data.total} items`, 'success');
+            showAlert(data.message, 'success');
+        } else {
+            logDemo(`✗ Failed to load sample data: ${data.error}`, 'error');
+            showAlert('Error: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        logDemo(`✗ Error loading sample data: ${error.message}`, 'error');
+        showAlert('Error: ' + error.message, 'danger');
+    }
+}
+
+async function clearAllData() {
+    if (!confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
+        return;
+    }
+    
+    logDemo('Clearing all data...', 'warning');
+    
+    try {
+        const response = await fetch('/api/clear', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            logDemo('✓ All data cleared successfully', 'success');
+            showAlert('All data cleared successfully', 'success');
+        } else {
+            logDemo(`✗ Failed to clear data: ${data.error}`, 'error');
+            showAlert('Error: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        logDemo(`✗ Error clearing data: ${error.message}`, 'error');
+        showAlert('Error: ' + error.message, 'danger');
+    }
+}
+
+async function runUserDemo() {
+    logDemo('=== Starting User Management Demo ===', 'step');
+    
+    const users = [
+        { key: 'demo_user_001', value: { name: 'Alice Demo', email: 'alice@demo.com', role: 'admin' }},
+        { key: 'demo_user_002', value: { name: 'Bob Demo', email: 'bob@demo.com', role: 'user' }},
+        { key: 'demo_user_003', value: { name: 'Charlie Demo', email: 'charlie@demo.com', role: 'guest' }}
+    ];
+    
+    // Create users
+    for (const user of users) {
+        await delay(demoStepDelay);
+        logDemo(`Creating user: ${user.value.name}`, 'info');
+        
+        try {
+            const response = await fetch('/api/put', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                logDemo(`  ✓ User created: ${user.key}`, 'success');
+            } else {
+                logDemo(`  ✗ Failed to create user: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            logDemo(`  ✗ Error: ${error.message}`, 'error');
+        }
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Read users
+    logDemo('Reading all users...', 'info');
+    for (const user of users) {
+        await delay(500);
+        try {
+            const response = await fetch(`/api/get/${encodeURIComponent(user.key)}`);
+            const result = await response.json();
+            
+            if (result.success && result.exists) {
+                logDemo(`  ✓ Found: ${result.value.name} (${result.value.email})`, 'success');
+            } else {
+                logDemo(`  ✗ User not found: ${user.key}`, 'error');
+            }
+        } catch (error) {
+            logDemo(`  ✗ Error: ${error.message}`, 'error');
+        }
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Update a user
+    logDemo('Updating user role...', 'info');
+    try {
+        const updateUser = { key: 'demo_user_002', value: { name: 'Bob Demo', email: 'bob@demo.com', role: 'admin' }};
+        const response = await fetch('/api/put', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateUser)
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            logDemo(`  ✓ User updated: promoted to admin`, 'success');
+        } else {
+            logDemo(`  ✗ Failed to update user: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Delete a user
+    logDemo('Deleting demo user...', 'info');
+    try {
+        const response = await fetch(`/api/delete/${encodeURIComponent('demo_user_003')}`, { method: 'DELETE' });
+        const result = await response.json();
+        
+        if (result.success && result.deleted) {
+            logDemo(`  ✓ User deleted: demo_user_003`, 'success');
+        } else {
+            logDemo(`  ✗ Failed to delete user`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    logDemo('=== User Management Demo Complete ===', 'step');
+}
+
+async function runProductDemo() {
+    logDemo('=== Starting Product Catalog Demo ===', 'step');
+    
+    const products = {
+        'demo_product_laptop': { name: 'Demo Laptop', price: 999.99, category: 'Electronics', stock: 50 },
+        'demo_product_mouse': { name: 'Demo Mouse', price: 19.99, category: 'Electronics', stock: 200 },
+        'demo_product_monitor': { name: 'Demo Monitor', price: 299.99, category: 'Electronics', stock: 75 },
+        'demo_product_keyboard': { name: 'Demo Keyboard', price: 79.99, category: 'Electronics', stock: 100 }
+    };
+    
+    logDemo('Adding products via batch operation...', 'info');
+    
+    try {
+        const response = await fetch('/api/batch_put', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: products })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            logDemo(`  ✓ Batch insert: ${result.successful}/${result.total} products added`, 'success');
+        } else {
+            logDemo(`  ✗ Batch insert failed: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Range query for products
+    logDemo('Querying products by range...', 'info');
+    try {
+        const response = await fetch('/api/range?start=demo_product_&end=demo_productz');
+        const result = await response.json();
+        
+        if (result.success) {
+            logDemo(`  ✓ Range query returned ${result.count} products`, 'success');
+            Object.keys(result.data).forEach(key => {
+                logDemo(`    - ${result.data[key].name}: $${result.data[key].price}`, 'info');
+            });
+        } else {
+            logDemo(`  ✗ Range query failed: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    logDemo('=== Product Catalog Demo Complete ===', 'step');
+}
+
+async function runConfigDemo() {
+    logDemo('=== Starting Configuration Demo ===', 'step');
+    
+    const configs = {
+        'demo_config_app_name': 'My Demo App',
+        'demo_config_version': '2.1.0',
+        'demo_config_debug_mode': true,
+        'demo_config_max_connections': 100,
+        'demo_config_features': ['authentication', 'logging', 'caching']
+    };
+    
+    logDemo('Storing configuration values...', 'info');
+    
+    for (const [key, value] of Object.entries(configs)) {
+        await delay(500);
+        
+        try {
+            const response = await fetch('/api/put', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key, value })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                logDemo(`  ✓ Config set: ${key} = ${JSON.stringify(value)}`, 'success');
+            } else {
+                logDemo(`  ✗ Failed to set config: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            logDemo(`  ✗ Error: ${error.message}`, 'error');
+        }
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Read all configurations
+    logDemo('Reading configuration values...', 'info');
+    
+    for (const key of Object.keys(configs)) {
+        await delay(300);
+        
+        try {
+            const response = await fetch(`/api/get/${encodeURIComponent(key)}`);
+            const result = await response.json();
+            
+            if (result.success && result.exists) {
+                logDemo(`  ✓ ${key}: ${JSON.stringify(result.value)}`, 'success');
+            } else {
+                logDemo(`  ✗ Config not found: ${key}`, 'error');
+            }
+        } catch (error) {
+            logDemo(`  ✗ Error: ${error.message}`, 'error');
+        }
+    }
+    
+    logDemo('=== Configuration Demo Complete ===', 'step');
+}
+
+async function runCompactionDemo() {
+    logDemo('=== Starting Compaction Demo ===', 'step');
+    
+    // Get initial stats
+    logDemo('Getting initial system stats...', 'info');
+    try {
+        const response = await fetch('/api/stats');
+        const result = await response.json();
+        
+        if (result.success) {
+            const stats = result.data;
+            logDemo(`  Initial state:`, 'info');
+            logDemo(`    - Memtable: ${stats.memtable.size}/${stats.memtable.max_size} entries`, 'info');
+            logDemo(`    - SSTables: ${stats.sstables.count}`, 'info');
+            logDemo(`    - Total keys: ${stats.total_active_keys}`, 'info');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error getting stats: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Add many items to trigger flushes
+    logDemo('Adding data to trigger memtable flushes...', 'info');
+    
+    const batchData = {};
+    for (let i = 0; i < 50; i++) {
+        batchData[`compaction_demo_${i.toString().padStart(3, '0')}`] = {
+            id: i,
+            data: `Demo data item ${i}`,
+            timestamp: new Date().toISOString()
+        };
+    }
+    
+    try {
+        const response = await fetch('/api/batch_put', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: batchData })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            logDemo(`  ✓ Added ${result.successful} items to trigger flushes`, 'success');
+        } else {
+            logDemo(`  ✗ Failed to add data: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Get stats after data addition
+    logDemo('Checking stats after data addition...', 'info');
+    try {
+        const response = await fetch('/api/stats');
+        const result = await response.json();
+        
+        if (result.success) {
+            const stats = result.data;
+            logDemo(`  After data addition:`, 'info');
+            logDemo(`    - Memtable: ${stats.memtable.size}/${stats.memtable.max_size} entries`, 'info');
+            logDemo(`    - SSTables: ${stats.sstables.count}`, 'info');
+            logDemo(`    - Total keys: ${stats.total_active_keys}`, 'info');
+            
+            if (stats.sstables.count >= stats.compaction_threshold) {
+                logDemo(`  ⚠️ Compaction threshold reached!`, 'warning');
+            }
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error getting stats: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Force compaction
+    logDemo('Forcing compaction...', 'info');
+    try {
+        const response = await fetch('/api/compact', { method: 'POST' });
+        const result = await response.json();
+        
+        if (result.success) {
+            logDemo(`  ✓ Compaction completed: ${result.message}`, 'success');
+        } else {
+            logDemo(`  ✗ Compaction failed: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error: ${error.message}`, 'error');
+    }
+    
+    await delay(demoStepDelay);
+    
+    // Get final stats
+    logDemo('Getting final stats after compaction...', 'info');
+    try {
+        const response = await fetch('/api/stats');
+        const result = await response.json();
+        
+        if (result.success) {
+            const stats = result.data;
+            logDemo(`  Final state:`, 'info');
+            logDemo(`    - Memtable: ${stats.memtable.size}/${stats.memtable.max_size} entries`, 'info');
+            logDemo(`    - SSTables: ${stats.sstables.count}`, 'info');
+            logDemo(`    - Total keys: ${stats.total_active_keys}`, 'info');
+        }
+    } catch (error) {
+        logDemo(`  ✗ Error getting stats: ${error.message}`, 'error');
+    }
+    
+    logDemo('=== Compaction Demo Complete ===', 'step');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Error - LSM Key-Value Store{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="text-danger mb-4">
+                    <i class="fas fa-exclamation-triangle fa-4x"></i>
+                </div>
+                
+                <h2 class="text-danger mb-3">Oops! Something went wrong</h2>
+                
+                <div class="alert alert-danger text-start">
+                    <strong>Error Details:</strong><br>
+                    <code>{{ error }}</code>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-home me-1"></i>Go Home
+                    </a>
+                    
+                    <button class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-1"></i>Go Back
+                    </button>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="text-muted">
+                    <small>
+                        If this error persists, please check the system logs or contact support.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

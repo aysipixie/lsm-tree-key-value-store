@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - LSM Key-Value Store{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-chart-bar me-2 text-primary"></i>
+            Analytics & Monitoring
+        </h1>
+    </div>
+</div>
+
+<!-- Key Metrics Overview -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100 metric-card">
+            <div class="card-body">
+                <div class="metric-value">{{ stats.total_active_keys }}</div>
+                <div class="metric-label">Active Keys</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-memory fa-3x"></i>
+                </div>
+                <h2 class="metric-value text-info">{{ stats.memtable.size }}</h2>
+                <div class="metric-label text-muted">Memtable Entries</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-hdd fa-3x"></i>
+                </div>
+                <h2 class="metric-value text-warning">{{ stats.sstables.count }}</h2>
+                <div class="metric-label text-muted">SSTables</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-list-ul fa-3x"></i>
+                </div>
+                <h2 class="metric-value text-success">{{ stats.wal.total_entries }}</h2>
+                <div class="metric-label text-muted">WAL Entries</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Memory Usage Chart -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Memory Usage Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="memoryChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Operations Chart -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>WAL Operations Breakdown
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="operationsChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Health Row -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>Performance Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Storage Efficiency</h6>
+                        {% set active_ratio = (stats.sstables.active_entries / stats.sstables.total_entries * 100) if stats.sstables.total_entries > 0 else 100 %}
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-success" style="width: {{ active_ratio }}%">
+                                {{ "%.1f"|format(active_ratio) }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Active entries vs total entries</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-info">Memtable Utilization</h6>
+                        {% set mem_ratio = (stats.memtable.size / stats.memtable.max_size * 100) %}
+                        <div class="progress mb-3">
+                            <div class="progress-bar bg-info" style="width: {{ mem_ratio }}%">
+                                {{ "%.1f"|format(mem_ratio) }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ stats.memtable.size }} / {{ stats.memtable.max_size }} entries</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <div class="text-primary">
+                            <i class="fas fa-database fa-2x"></i>
+                        </div>
+                        <h6 class="mt-2">Total Storage</h6>
+                        <small class="text-muted">
+                            WAL: {{ "%.2f"|format(stats.wal.wal_file_size / 1024) }} KB<br>
+                            SSTables: {{ stats.sstables.count }} files
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        <div class="text-warning">
+                            <i class="fas fa-compress-alt fa-2x"></i>
+                        </div>
+                        <h6 class="mt-2">Compaction Status</h6>
+                        <small class="text-muted">
+                            Threshold: {{ stats.compaction_threshold }}<br>
+                            {% if stats.sstables.count >= stats.compaction_threshold %}
+                            <span class="text-warning">Compaction needed</span>
+                            {% else %}
+                            <span class="text-success">Optimal</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        <div class="text-success">
+                            <i class="fas fa-heartbeat fa-2x"></i>
+                        </div>
+                        <h6 class="mt-2">System Health</h6>
+                        <small class="text-muted">
+                            Status: <span class="text-success">Healthy</span><br>
+                            Uptime: Active
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Data Directory:</strong></td>
+                        <td><small><code>{{ stats.kv_store.data_directory }}</code></small></td>
+                    </tr>
+                    <tr>
+                        <td><strong>WAL File:</strong></td>
+                        <td><small><code>{{ stats.kv_store.wal_file }}</code></small></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Max Memtable Size:</strong></td>
+                        <td><span class="badge bg-secondary">{{ stats.memtable.max_size }}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Max SSTable Size:</strong></td>
+                        <td><span class="badge bg-secondary">30</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Compaction Threshold:</strong></td>
+                        <td><span class="badge bg-warning">{{ stats.compaction_threshold }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SSTable Details -->
+{% if stats.sstables.details %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>SSTable Details
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Table ID</th>
+                                <th>Total Entries</th>
+                                <th>Active Entries</th>
+                                <th>Deleted Entries</th>
+                                <th>File Size</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sstable in stats.sstables.details %}
+                            <tr>
+                                <td><code>{{ sstable.table_id }}</code></td>
+                                <td>{{ sstable.total_entries }}</td>
+                                <td><span class="badge bg-success">{{ sstable.active_entries }}</span></td>
+                                <td><span class="badge bg-danger">{{ sstable.deleted_entries }}</span></td>
+                                <td>{{ "%.2f"|format(sstable.file_size / 1024) }} KB</td>
+                                <td>
+                                    {% if sstable.is_full %}
+                                    <span class="badge bg-warning">Full</span>
+                                    {% else %}
+                                    <span class="badge bg-success">Available</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Memory Usage Pie Chart
+const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+const memoryChart = new Chart(memoryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Memtable', 'Available Memtable', 'SSTables Active', 'SSTables Deleted'],
+        datasets: [{
+            data: [
+                {{ stats.memtable.size }},
+                {{ stats.memtable.max_size - stats.memtable.size }},
+                {{ stats.sstables.active_entries }},
+                {{ stats.sstables.total_entries - stats.sstables.active_entries }}
+            ],
+            backgroundColor: [
+                '#17a2b8',
+                '#e9ecef',
+                '#28a745',
+                '#dc3545'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Operations Bar Chart
+const operationsCtx = document.getElementById('operationsChart').getContext('2d');
+const operationsChart = new Chart(operationsCtx, {
+    type: 'bar',
+    data: {
+        labels: ['PUT Operations', 'DELETE Operations'],
+        datasets: [{
+            label: 'Count',
+            data: [
+                {{ stats.wal.put_operations }},
+                {{ stats.wal.delete_operations }}
+            ],
+            backgroundColor: [
+                '#28a745',
+                '#dc3545'
+            ],
+            borderColor: [
+                '#1e7e34',
+                '#c82333'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

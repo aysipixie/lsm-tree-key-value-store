@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LSM Key-Value Store{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+            Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Health Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-heartbeat me-2"></i>System Health
+                </h5>
+                <div class="d-flex align-items-center">
+                    {% if health.status == 'healthy' %}
+                    <span class="badge bg-success me-3">
+                        <i class="fas fa-check-circle me-1"></i>HEALTHY
+                    </span>
+                    {% else %}
+                    <span class="badge bg-danger me-3">
+                        <i class="fas fa-exclamation-triangle me-1"></i>{{ health.status.upper() }}
+                    </span>
+                    {% endif %}
+                    <small class="text-muted">Last checked: {{ health.timestamp }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-primary mb-2">
+                    <i class="fas fa-key fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ total_keys }}</h3>
+                <p class="card-text text-muted">Total Keys</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-memory fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ stats.memtable.size }}</h3>
+                <p class="card-text text-muted">Memtable Size</p>
+                <small class="text-muted">Max: {{ stats.memtable.max_size }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-hdd fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ stats.sstables.count }}</h3>
+                <p class="card-text text-muted">SSTables</p>
+                <small class="text-muted">{{ stats.sstables.active_entries }} active entries</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-list-ul fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ stats.wal.total_entries }}</h3>
+                <p class="card-text text-muted">WAL Entries</p>
+                <small class="text-muted">{{ stats.wal.put_operations }} puts, {{ stats.wal.delete_operations }} deletes</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Memory Usage Progress Bars -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-memory me-2"></i>Memtable Usage
+                </h5>
+                {% set memtable_pct = (stats.memtable.size / stats.memtable.max_size * 100) | round(1) %}
+                <div class="progress mb-2">
+                    <div class="progress-bar {% if memtable_pct > 80 %}bg-danger{% elif memtable_pct > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                         style="width: {{ memtable_pct }}%">
+                        {{ memtable_pct }}%
+                    </div>
+                </div>
+                <small class="text-muted">
+                    {{ stats.memtable.size }} / {{ stats.memtable.max_size }} entries
+                    {% if stats.memtable.is_full %}
+                    <span class="badge bg-danger ms-2">FULL</span>
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-compress-alt me-2"></i>Compaction Status
+                </h5>
+                {% set compaction_pct = (stats.sstables.count / stats.compaction_threshold * 100) | round(1) if stats.compaction_threshold > 0 else 0 %}
+                <div class="progress mb-2">
+                    <div class="progress-bar {% if compaction_pct > 100 %}bg-danger{% elif compaction_pct > 80 %}bg-warning{% else %}bg-info{% endif %}" 
+                         style="width: {{ [compaction_pct, 100] | min }}%">
+                        {{ compaction_pct }}%
+                    </div>
+                </div>
+                <small class="text-muted">
+                    {{ stats.sstables.count }} / {{ stats.compaction_threshold }} SSTables
+                    {% if stats.sstables.count >= stats.compaction_threshold %}
+                    <span class="badge bg-warning ms-2">COMPACTION NEEDED</span>
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Keys -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Recent Keys
+                    <small class="text-muted">(First 10)</small>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if keys %}
+                <div class="list-group list-group-flush">
+                    {% for key in keys[:10] %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span class="font-monospace">{{ key }}</span>
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-key fa-xs"></i>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if total_keys > 10 %}
+                <div class="mt-3 text-center">
+                    <a href="{{ url_for('data_page') }}" class="btn btn-outline-primary btn-sm">
+                        View All {{ total_keys }} Keys
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">No keys found. <a href="{{ url_for('demo_page') }}">Load sample data?</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('operations_page') }}'">
+                        <i class="fas fa-plus me-2"></i>Add New Key-Value Pair
+                    </button>
+                    
+                    <button type="button" class="btn btn-info" onclick="forceFlush()">
+                        <i class="fas fa-upload me-2"></i>Force Flush Memtable
+                    </button>
+                    
+                    <button type="button" class="btn btn-warning" onclick="forceCompaction()">
+                        <i class="fas fa-compress-alt me-2"></i>Force Compaction
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-success" onclick="refreshStats()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh Statistics
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Data Directory:</strong><br>
+                        <code>{{ stats.kv_store.data_directory }}</code>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>WAL File:</strong><br>
+                        <code>{{ stats.kv_store.wal_file }}</code>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>WAL File Size:</strong><br>
+                        {{ "%.2f"|format(stats.wal.wal_file_size / 1024) }} KB
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function forceFlush() {
+    if (confirm('Are you sure you want to force flush the memtable to SSTable?')) {
+        fetch('/api/flush', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('Error: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showAlert('Error: ' + error.message, 'danger');
+            });
+    }
+}
+
+function forceCompaction() {
+    if (confirm('Are you sure you want to force compaction of SSTables?')) {
+        fetch('/api/compact', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('Error: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showAlert('Error: ' + error.message, 'danger');
+            });
+    }
+}
+
+function refreshStats() {
+    location.reload();
+}
+</script>
+{% endblock %}
