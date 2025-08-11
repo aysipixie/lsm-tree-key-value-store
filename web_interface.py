@@ -336,5 +336,5 @@ if __name__ == '__main__':
     
     # Run Flask app
     print("Starting Key-Value Store Web Interface...")
-    print("Access the application at: http://localhost:8888")
-    app.run(debug=True, host='0.0.0.0', port=8888)
+    print("Access the application at: http://localhost:5001")
+    app.run(debug=True, host='0.0.0.0', port=5001)
