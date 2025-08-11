@@ -77,7 +77,7 @@ This implementation fully satisfies all assignment requirements:
 
 1. **Clone or navigate to the project directory**
 ```bash
-cd software-arch-HW9
+cd lsm-tree-key-value-store
 ```
 
 2. **Install dependencies**
@@ -195,7 +195,7 @@ stats = kv_store.get_stats()
 ## File Structure
 
 ```
-software-arch-HW9/
+lsm-tree-key-value-store/
 ├── wal.py                 # Write-Ahead Log implementation
 ├── sstable.py             # SSTable and manager implementations
 ├── lsm_tree.py            # LSM Tree core logic
